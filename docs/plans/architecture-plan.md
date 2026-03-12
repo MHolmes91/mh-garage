@@ -6,6 +6,8 @@ _Last updated: 2026-03-12_
 
 This plan starts from a bare Linux VPS, installs Dokploy with the official install script, and then self-hosts zrok on the same server.
 
+If you want to execute the plan with a resumable server-side helper, use `scripts/install.sh` with `scripts/.env.example` as the starting env file. For the default host-side deployment, keep `DEPLOY_METHOD='raw'`. If you want the zrok stack to become a Dokploy-managed Docker Compose app instead, set `DEPLOY_METHOD='dokploy-compose-api'` to enable the experimental API-backed path.
+
 Dokploy remains the public edge on ports `80` and `443`.
 zrok is self-hosted behind Dokploy's Traefik for:
 
@@ -144,6 +146,8 @@ Do not plan on using the Dokploy CLI for this first user creation step. The curr
 Before doing more work, point `dokploy.example.com` at the VPS and configure it in Dokploy so the panel is available over HTTPS.
 
 Once the panel works on a real domain, you can optionally remove the raw `:3000` exposure later.
+
+This is a panel step, not a Dokploy CLI step.
 
 ## Step 4. Install the Dokploy CLI
 
