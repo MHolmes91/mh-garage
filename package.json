@@ -1,0 +1,10 @@
+{
+  "name": "mh-garage",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:host": "node scripts/install.js",
+    "install:dokploy-compose-api": "node scripts/install-dokploy-compose-api.js",
+    "test": "node --test"
+  }
+}

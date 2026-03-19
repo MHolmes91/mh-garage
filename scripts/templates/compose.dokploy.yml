@@ -1,0 +1,41 @@
+services:
+  zrok-controller:
+    networks:
+      - zrok-instance
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - 'traefik.http.routers.zrok-controller-web.rule=Host("${ZROK_DOMAIN}")'
+      - traefik.http.routers.zrok-controller-web.entrypoints=web
+      - traefik.http.routers.zrok-controller-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.zrok-controller-web.service=zrok-controller
+      - 'traefik.http.routers.zrok-controller-websecure.rule=Host("${ZROK_DOMAIN}")'
+      - traefik.http.routers.zrok-controller-websecure.entrypoints=websecure
+      - traefik.http.routers.zrok-controller-websecure.tls=true
+      - traefik.http.routers.zrok-controller-websecure.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.zrok-controller-websecure.service=zrok-controller
+      - traefik.http.services.zrok-controller.loadbalancer.server.port=${ZROK_CTRL_PORT}
+
+  zrok-frontend:
+    networks:
+      - zrok-instance
+      - dokploy-network
+    environment:
+      ZROK_FRONTEND_SCHEME: https
+      ZROK_FRONTEND_PORT: "${ZROK_PUBLIC_HTTPS_PORT}"
+    labels:
+      - traefik.enable=true
+      - 'traefik.http.routers.zrok-frontend-web.rule=HostRegexp("{share:[A-Za-z0-9-]+}.${ZROK_DOMAIN}")'
+      - traefik.http.routers.zrok-frontend-web.entrypoints=web
+      - traefik.http.routers.zrok-frontend-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.zrok-frontend-web.service=zrok-frontend
+      - 'traefik.http.routers.zrok-frontend-websecure.rule=HostRegexp("{share:[A-Za-z0-9-]+}.${ZROK_DOMAIN}")'
+      - traefik.http.routers.zrok-frontend-websecure.entrypoints=websecure
+      - traefik.http.routers.zrok-frontend-websecure.tls=true
+      - traefik.http.routers.zrok-frontend-websecure.tls.certresolver=${TRAEFIK_CERT_RESOLVER}
+      - traefik.http.routers.zrok-frontend-websecure.service=zrok-frontend
+      - traefik.http.services.zrok-frontend.loadbalancer.server.port=${ZROK_FRONTEND_INTERNAL_PORT}
+
+networks:
+  dokploy-network:
+    external: true

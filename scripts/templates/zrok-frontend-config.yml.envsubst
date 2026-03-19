@@ -1,0 +1,4 @@
+v: 4
+
+host_match: ${ZROK_DNS_ZONE}
+address: 0.0.0.0:${ZROK_FRONTEND_PORT}
