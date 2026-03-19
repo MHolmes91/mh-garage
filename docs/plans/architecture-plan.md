@@ -6,7 +6,7 @@ _Last updated: 2026-03-12_
 
 This plan starts from a bare Linux VPS, installs Dokploy with the official install script, and then self-hosts zrok on the same server.
 
-If you want to execute the plan with a resumable server-side helper, use `scripts/install.sh` with `scripts/.env.example` as the starting env file. For the default host-side deployment, keep `DEPLOY_METHOD='raw'`. If you want the zrok stack to become a Dokploy-managed Docker Compose app instead, set `DEPLOY_METHOD='dokploy-compose-api'` to enable the experimental API-backed path.
+If you want to execute the plan with a resumable server-side helper, use `npm run install:host -- --env-file deploy.env` with `scripts/.env.example` as the starting env file. For the default host-side deployment, keep `DEPLOY_METHOD='raw'`. If you want the zrok stack to become a Dokploy-managed Docker Compose app instead, set `DEPLOY_METHOD='dokploy-compose-api'` to enable the experimental API-backed path; the host installer will delegate to `npm run install:dokploy-compose-api -- --env-file deploy.env --mode pause --prepared` after preparing artifacts.
 
 Dokploy remains the public edge on ports `80` and `443`.
 zrok is self-hosted behind Dokploy's Traefik for:
