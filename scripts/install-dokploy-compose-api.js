@@ -3,20 +3,13 @@
 import { fileURLToPath } from 'node:url';
 
 import {
-  createDokployCompose,
-  createDokployEnvironment,
-  createDokployProject,
   createEnvState,
-  deployDokployCompose,
-  dokployGet,
-  dokployPost,
-  findComposeIdInEnvironment,
-  findEnvironmentIdByName,
-  findProjectIdByName,
   parseComposeApiArgs,
   renderComposeBundle,
-  updateDokployCompose,
-} from './lib.mjs';
+} from './lib/index.mjs';
+import {
+  createDokployClient,
+} from './lib/dokploy-client.mjs';
 
 const HELP_TEXT = `Usage: install-dokploy-compose-api.js [--env-file PATH] [--mode pause|exit] [--prepared]
 
@@ -72,6 +65,12 @@ function requireValue(value, message) {
   }
 }
 
+/**
+ * Creates or reuses Dokploy resources, uploads the rendered compose bundle, and triggers a deployment.
+ * @param {string[]} [argv]
+ * @param {{ stdout?: NodeJS.WritableStream, fetchFn?: typeof fetch, renderComposeBundle?: typeof renderComposeBundle }} [dependencies]
+ * @returns {Promise<void>}
+ */
 export async function main(argv = process.argv.slice(2), dependencies = {}) {
   const {
     stdout = process.stdout,
@@ -100,30 +99,32 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   requireValue(env.DOKPLOY_API_TOKEN, 'DOKPLOY_API_TOKEN is required for the Dokploy Compose API installer.');
   requireValue(env.ZROK_INSTANCE_DIR, 'ZROK_INSTANCE_DIR is required for the Dokploy Compose API installer.');
 
-  const getJson = (endpoint, input) => dokployGet(env.DOKPLOY_URL, env.DOKPLOY_API_TOKEN, endpoint, input, fetchFn);
-  const postJson = (endpoint, payload) => dokployPost(env.DOKPLOY_URL, env.DOKPLOY_API_TOKEN, endpoint, payload, fetchFn);
+  const dokploy = createDokployClient({
+    baseUrl: env.DOKPLOY_URL,
+    apiToken: env.DOKPLOY_API_TOKEN,
+    fetchFn,
+  });
 
   if (!env.DOKPLOY_PROJECT_ID) {
-    env.DOKPLOY_PROJECT_ID = findProjectIdByName(
-      await getJson('project.all'),
-      env.DOKPLOY_PROJECT_NAME,
-    );
+    env.DOKPLOY_PROJECT_ID = await dokploy.findProjectIdByName(env.DOKPLOY_PROJECT_NAME);
     if (!env.DOKPLOY_PROJECT_ID) {
-      await persistVar(envState, env, 'DOKPLOY_PROJECT_ID', await createDokployProject(env, postJson));
+      await persistVar(envState, env, 'DOKPLOY_PROJECT_ID', await dokploy.createProject(env));
     } else {
       await persistVar(envState, env, 'DOKPLOY_PROJECT_ID', env.DOKPLOY_PROJECT_ID);
     }
   }
 
   if (!env.DOKPLOY_ENVIRONMENT_ID) {
-    const project = await getJson('project.one', { projectId: env.DOKPLOY_PROJECT_ID });
-    env.DOKPLOY_ENVIRONMENT_ID = findEnvironmentIdByName(project, env.DOKPLOY_ENVIRONMENT_NAME);
+    env.DOKPLOY_ENVIRONMENT_ID = await dokploy.findEnvironmentIdByName(
+      env.DOKPLOY_PROJECT_ID,
+      env.DOKPLOY_ENVIRONMENT_NAME,
+    );
     if (!env.DOKPLOY_ENVIRONMENT_ID) {
       await persistVar(
         envState,
         env,
         'DOKPLOY_ENVIRONMENT_ID',
-        await createDokployEnvironment(env, postJson),
+        await dokploy.createEnvironment(env),
       );
     } else {
       await persistVar(envState, env, 'DOKPLOY_ENVIRONMENT_ID', env.DOKPLOY_ENVIRONMENT_ID);
@@ -131,23 +132,22 @@ export async function main(argv = process.argv.slice(2), dependencies = {}) {
   }
 
   if (!env.DOKPLOY_COMPOSE_ID) {
-    const project = await getJson('project.one', { projectId: env.DOKPLOY_PROJECT_ID });
-    env.DOKPLOY_COMPOSE_ID = findComposeIdInEnvironment(
-      project,
+    env.DOKPLOY_COMPOSE_ID = await dokploy.findComposeIdInEnvironment(
+      env.DOKPLOY_PROJECT_ID,
       env.DOKPLOY_ENVIRONMENT_NAME,
       env.DOKPLOY_COMPOSE_NAME,
       env.DOKPLOY_COMPOSE_APP_NAME,
     );
     if (!env.DOKPLOY_COMPOSE_ID) {
-      await persistVar(envState, env, 'DOKPLOY_COMPOSE_ID', await createDokployCompose(env, postJson));
+      await persistVar(envState, env, 'DOKPLOY_COMPOSE_ID', await dokploy.createCompose(env));
     } else {
       await persistVar(envState, env, 'DOKPLOY_COMPOSE_ID', env.DOKPLOY_COMPOSE_ID);
     }
   }
 
   const bundle = await renderBundle(env.ZROK_INSTANCE_DIR);
-  await updateDokployCompose(env, bundle, postJson);
-  await deployDokployCompose(env, postJson);
+  await dokploy.updateCompose(env, bundle);
+  await dokploy.deployCompose(env);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
