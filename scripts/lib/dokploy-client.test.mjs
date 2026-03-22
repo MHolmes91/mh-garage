@@ -9,13 +9,9 @@ test('dokploy client binds auth details and unwraps resource requests', async ()
     return {
       ok: true,
       async json() {
-        return {
-          result: {
-            data: {
-              json: options.method === 'POST' ? { composeId: 'compose-1' } : [{ name: 'project-1', projectId: 'project-1' }],
-            },
-          },
-        };
+        return options.method === 'POST'
+          ? { composeId: 'compose-1' }
+          : [{ name: 'project-1', projectId: 'project-1' }];
       },
     };
   };
@@ -33,15 +29,15 @@ test('dokploy client binds auth details and unwraps resource requests', async ()
   assert.equal(composeId, 'compose-1');
   assert.deepEqual(requestLog, [
     {
-      url: 'https://dokploy.example.com/api/trpc/project.all',
+      url: 'https://dokploy.example.com/api/project.all',
       options: { headers: { 'Content-Type': 'application/json', 'x-api-key': 'token-123' } },
     },
     {
-      url: 'https://dokploy.example.com/api/trpc/compose.create',
+      url: 'https://dokploy.example.com/api/compose.create',
       options: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': 'token-123' },
-        body: '{"json":{"name":"zrok-instance","description":"Self-hosted zrok on Dokploy","environmentId":"env-1","composeType":"docker-compose","appName":"zrok-instance"}}',
+        body: '{"name":"zrok-instance","description":"Self-hosted zrok on Dokploy","environmentId":"env-1","composeType":"docker-compose","appName":"zrok-instance"}',
       },
     },
   ]);
@@ -54,7 +50,7 @@ test('dokploy client discovers project, environment, and compose ids', async () 
       return {
         ok: true,
         async json() {
-          return { result: { data: { json: [{ name: 'demo', projectId: 'project-0' }, { name: 'zrok', projectId: 'project-1' }] } } };
+          return [{ name: 'demo', projectId: 'project-0' }, { name: 'zrok', projectId: 'project-1' }];
         },
       };
     }
@@ -63,17 +59,11 @@ test('dokploy client discovers project, environment, and compose ids', async () 
       ok: true,
       async json() {
         return {
-          result: {
-            data: {
-              json: {
-                environments: [{
-                  name: 'production',
-                  environmentId: 'env-1',
-                  compose: [{ name: 'other', appName: 'other-app', composeId: 'compose-0' }, { name: 'zrok-instance', appName: 'zrok-app', composeId: 'compose-1' }],
-                }],
-              },
-            },
-          },
+          environments: [{
+            name: 'production',
+            environmentId: 'env-1',
+            compose: [{ name: 'other', appName: 'other-app', composeId: 'compose-0' }, { name: 'zrok-instance', appName: 'zrok-app', composeId: 'compose-1' }],
+          }],
         };
       },
     };
@@ -93,12 +83,12 @@ test('dokploy client create, update, and deploy helpers use env values', async (
     baseUrl: 'https://dokploy.example.com',
     apiToken: 'token-123',
     fetchFn: async (url, options = {}) => {
-      const endpoint = url.split('/api/trpc/')[1];
-      requestLog.push({ endpoint, payload: options.body ? JSON.parse(options.body).json : undefined });
-      if (endpoint === 'project.create') return { ok: true, async json() { return { result: { data: { json: { projectId: 'project-1' } } } }; } };
-      if (endpoint === 'environment.create') return { ok: true, async json() { return { result: { data: { json: { environmentId: 'env-1' } } } }; } };
-      if (endpoint === 'compose.create') return { ok: true, async json() { return { result: { data: { json: { composeId: 'compose-1' } } } }; } };
-      return { ok: true, async json() { return { result: { data: { json: {} } } }; } };
+      const endpoint = url.split('/api/')[1];
+      requestLog.push({ endpoint, payload: options.body ? JSON.parse(options.body) : undefined });
+      if (endpoint === 'project.create') return { ok: true, async json() { return { projectId: 'project-1' }; } };
+      if (endpoint === 'environment.create') return { ok: true, async json() { return { environmentId: 'env-1' }; } };
+      if (endpoint === 'compose.create') return { ok: true, async json() { return { composeId: 'compose-1' }; } };
+      return { ok: true, async json() { return {}; } };
     },
   });
   const envConfig = {

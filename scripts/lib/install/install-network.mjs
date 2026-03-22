@@ -1,4 +1,5 @@
 import { lookup } from 'node:dns/promises';
+import { isIP } from 'node:net';
 
 import { log, note } from './install-logging.mjs';
 
@@ -27,11 +28,17 @@ export async function waitForDokployPanel(stdout) {
 }
 
 export async function detectPublicIp() {
-  for (const url of ['https://ifconfig.io', 'https://icanhazip.com', 'https://ipecho.net/plain']) {
+  for (const url of [
+    'https://ifconfig.io/ip',
+    'https://api.ipify.org',
+    'https://icanhazip.com',
+    'https://ipecho.net/plain',
+  ]) {
     try {
       const response = await fetch(url, { headers: { Accept: 'text/plain' } });
-      const ip = (await response.text()).trim();
-      if (ip) {
+      const body = (await response.text()).trim();
+      const ip = body.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/)?.[0] ?? '';
+      if (isIP(ip) === 4) {
         return ip;
       }
     } catch {}

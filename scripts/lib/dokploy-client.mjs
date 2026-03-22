@@ -8,8 +8,19 @@ async function parseDokployResponse(response) {
     throw new Error(body || `Dokploy request failed with status ${response.status}`);
   }
 
-  const payload = await response.json();
-  return payload?.result?.data?.json;
+  return response.json();
+}
+
+function appendQueryParams(url, input) {
+  if (input == null) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(input)) {
+    if (value != null) {
+      url.searchParams.set(key, String(value));
+    }
+  }
 }
 
 function matchProjectIdByName(projects, name) {
@@ -33,11 +44,8 @@ function matchComposeIdInEnvironment(project, environmentName, composeName, comp
  */
 export function createDokployClient({ baseUrl, apiToken, fetchFn = fetch }) {
   async function get(endpoint, input) {
-    const url = new URL(`${normalizeDokployUrl(baseUrl)}/api/trpc/${endpoint}`);
-
-    if (input != null) {
-      url.searchParams.set('input', JSON.stringify({ json: input }));
-    }
+    const url = new URL(`${normalizeDokployUrl(baseUrl)}/api/${endpoint}`);
+    appendQueryParams(url, input);
 
     return parseDokployResponse(await fetchFn(url.toString(), {
       headers: {
@@ -48,13 +56,13 @@ export function createDokployClient({ baseUrl, apiToken, fetchFn = fetch }) {
   }
 
   async function post(endpoint, payload) {
-    return parseDokployResponse(await fetchFn(`${normalizeDokployUrl(baseUrl)}/api/trpc/${endpoint}`, {
+    return parseDokployResponse(await fetchFn(`${normalizeDokployUrl(baseUrl)}/api/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiToken,
       },
-      body: JSON.stringify({ json: payload }),
+      body: JSON.stringify(payload),
     }));
   }
 
